@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuthFlow API Documentation</title>
+    <meta name="description" content="AuthFlow API - Professional JWT Authentication API Documentation">
+    <meta name="keywords" content="API, JWT, Authentication, REST, Node.js, Express, TypeScript">
+    <meta name="author" content="AuthFlow API Team">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="AuthFlow API Documentation">
+    <meta property="og:description" content="Professional JWT Authentication API with comprehensive user management">
+    <meta property="og:url" content="https://authflow.kuldeepdev.me">
+    <meta property="og:type" content="website">
+    
+    <!-- Swagger UI CSS -->
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="https://petstore.swagger.io/favicon-32x32.png">
+    
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin: 0;
+            background: #fafafa;
+        }
+        
+        /* Custom styling for better appearance */
+        .swagger-ui .topbar {
+            display: none;
+        }
+        
+        .swagger-ui .info {
+            margin: 50px 0;
+        }
+        
+        .swagger-ui .info .title {
+            font-size: 36px;
+            color: #3b4151;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        
+        .swagger-ui .scheme-container {
+            background: #fff;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.1);
+        }
+        
+        /* Custom header */
+        .custom-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .custom-header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+            letter-spacing: -1px;
+        }
+        
+        .custom-header p {
+            margin: 10px 0 0 0;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .api-info {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .quick-links {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 1200px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .quick-links h3 {
+            margin-top: 0;
+            color: #3b4151;
+        }
+        
+        .quick-links a {
+            display: inline-block;
+            margin: 5px 10px;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .quick-links a:hover {
+            background: #5a67d8;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .custom-header h1 {
+                font-size: 2em;
+            }
+            
+            .quick-links {
+                margin: 20px;
+                padding: 15px;
+            }
+            
+            .quick-links a {
+                display: block;
+                margin: 5px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Custom Header -->
+    <div class="custom-header">
+        <div class="api-info">
+            <h1>AuthFlow API Documentation</h1>
+            <p>Professional JWT Authentication API
+                <span class="status-badge">Live</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+        <h3>🚀 Quick Start</h3>
+        <a href="https://authflow.kuldeepdev.me/health" target="_blank">API Status</a>
+        <a href="https://github.com/your-username/authflow-api" target="_blank">GitHub Repository</a>
+        <a href="#/Authentication/post_api_auth_register">Try Registration</a>
+        <a href="#/Authentication/post_api_auth_login">Try Login</a>
+        <a href="mailto:contact@kuldeepdev.me">Contact Support</a>
+    </div>
+
+    <!-- Swagger UI Container -->
+    <div id="swagger-ui"></div>
+
+    <!-- Swagger UI JavaScript -->
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+    
+    <script>
+        window.onload = function() {
+            // Initialize Swagger UI
+            const ui = SwaggerUIBundle({
+                url: './openapi.yaml',  // Path to your OpenAPI spec
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                defaultModelsExpandDepth: 1,
+                defaultModelExpandDepth: 1,
+                docExpansion: "list",
+                operationsSorter: "alpha",
+                tagsSorter: "alpha",
+                filter: true,
+                showExtensions: true,
+                showCommonExtensions: true,
+                tryItOutEnabled: true,
+                requestInterceptor: function(req) {
+                    // Add custom headers if needed
+                    req.headers['User-Agent'] = 'AuthFlow-API-Docs';
+                    return req;
+                },
+                responseInterceptor: function(res) {
+                    // Handle responses if needed
+                    return res;
+                },
+                onComplete: function() {
+                    console.log('✅ AuthFlow API Documentation loaded successfully!');
+                    
+                    // Add version info to the page
+                    const infoSection = document.querySelector('.swagger-ui .info');
+                    if (infoSection) {
+                        const versionBadge = document.createElement('div');
+                        versionBadge.innerHTML = `
+                            <div style="margin-top: 20px;">
+                                <span style="background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                    v1.0.0
+                                </span>
+                                <span style="background: #2196F3; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 5px;">
+                                    Production Ready
+                                </span>
+                                <span style="background: #FF9800; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 5px;">
+                                    Rate Limited: 100/15min
+                                </span>
+                            </div>
+                        `;
+                        infoSection.appendChild(versionBadge);
+                    }
+                }
+            });
+
+            // Custom JavaScript for enhanced functionality
+            window.ui = ui;
+            
+            // Add copy to clipboard functionality for code examples
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('copy-to-clipboard')) {
+                    const text = e.target.getAttribute('data-clipboard-text');
+                    navigator.clipboard.writeText(text).then(function() {
+                        e.target.textContent = 'Copied!';
+                        setTimeout(() => {
+                            e.target.textContent = 'Copy';
+                        }, 2000);
+                    });
+                }
+            });
+        }
+        
+        // Google Analytics (optional - replace with your tracking ID)
+        // window.dataLayer = window.dataLayer || [];
+        // function gtag(){dataLayer.push(arguments);}
+        // gtag('js', new Date());
+        // gtag('config', 'GA_TRACKING_ID');
+    </script>
+    
+    <!-- Optional: Google Analytics -->
+    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=GA_TRACKING_ID"></script> -->
+</body>
+</html>

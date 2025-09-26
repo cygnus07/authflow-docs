@@ -1,0 +1,1077 @@
+openapi: 3.0.3
+info:
+  title: AuthFlow API
+  description: |
+    A production-ready JWT authentication API built with Node.js, Express, TypeScript, and MongoDB. 
+    
+    ## Features
+    - JWT-based authentication with refresh tokens
+    - User registration and email verification
+    - Password recovery and reset
+    - Google OAuth2.0 integration
+    - Admin user management
+    - Comprehensive security measures
+    
+    ## Authentication
+    This API uses JWT Bearer tokens. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your_access_token>
+    ```
+    
+    ## Rate Limiting
+    - **Limit**: 100 requests per 15-minute window per IP address
+    - **Headers**: Rate limit info included in response headers
+    
+  version: 1.0.0
+  contact:
+    name: AuthFlow API Support
+    url: https://authflow.kuldeepdev.me
+    email: contact@kuldeepdev.me
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://authflow.kuldeepdev.me
+    description: Production server
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Health
+    description: System health monitoring endpoints
+  - name: Authentication
+    description: User authentication and token management
+  - name: User Management
+    description: User profile and account management
+  - name: Admin
+    description: Administrative user management (Admin role required)
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Basic Health Check
+      description: Simple health status check for the API
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    description: Server uptime in seconds
+                  environment:
+                    type: string
+                    example: "production"
+
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Detailed Health Check
+      description: Comprehensive system health information including database and memory status
+      responses:
+        '200':
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealth'
+        '503':
+          description: Service unavailable
+
+  /api/health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness Probe
+      description: Kubernetes readiness probe endpoint
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ready"
+        '503':
+          description: Service not ready
+
+  /api/health/live:
+    get:
+      tags: [Health]
+      summary: Liveness Probe
+      description: Kubernetes liveness probe endpoint
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "alive"
+
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: User Registration
+      description: Register a new user account. Email verification required after registration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: User Login
+      description: Authenticate user with email and password. Returns JWT access token and refresh token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Email not verified or account suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/refresh-token:
+    post:
+      tags: [Authentication]
+      summary: Refresh Token
+      description: Get new access token using refresh token. Old tokens are invalidated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Tokens refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User Logout
+      description: Logout user and invalidate current tokens
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/verify-email:
+    post:
+      tags: [Authentication]
+      summary: Verify Email
+      description: Verify user email using 6-digit OTP sent via email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/resend-verification:
+    post:
+      tags: [Authentication]
+      summary: Resend Verification Email
+      description: Resend email verification OTP to the specified email address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+      responses:
+        '200':
+          description: Verification email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/forgot-password:
+    post:
+      tags: [Authentication]
+      summary: Forgot Password
+      description: Request password reset email with reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Password reset email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Reset Password
+      description: Reset password using token from email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/google:
+    get:
+      tags: [Authentication]
+      summary: Google OAuth Login
+      description: Initiate Google OAuth authentication flow
+      responses:
+        '302':
+          description: Redirect to Google OAuth consent screen
+
+  /api/auth/google/callback:
+    get:
+      tags: [Authentication]
+      summary: Google OAuth Callback
+      description: Handle Google OAuth callback after user authorization
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: Authorization code from Google
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          description: State parameter for security
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OAuth login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: OAuth error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/profile:
+    get:
+      tags: [User Management]
+      summary: Get User Profile
+      description: Get current user's profile information
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    put:
+      tags: [User Management]
+      summary: Update User Profile
+      description: Update current user's profile information
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/change-password:
+    put:
+      tags: [User Management]
+      summary: Change Password
+      description: Change current user's password
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Current password incorrect or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin:
+    get:
+      tags: [Admin]
+      summary: Get All Users
+      description: Retrieve all users with pagination and filtering (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: search
+          in: query
+          description: Search by name or email
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by user status
+          schema:
+            type: string
+            enum: [active, inactive, suspended, banned, pending]
+        - name: role
+          in: query
+          description: Filter by user role
+          schema:
+            type: string
+            enum: [user, admin, editor, moderator, customer, vendor]
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersListResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/{id}:
+    get:
+      tags: [Admin]
+      summary: Get User by ID
+      description: Get specific user details by ID (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    put:
+      tags: [Admin]
+      summary: Update User (Admin)
+      description: Update user information as admin (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      tags: [Admin]
+      summary: Delete User
+      description: Permanently delete user account (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token for authentication
+
+  schemas:
+    # Request Schemas
+    RegisterRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+        - confirmPassword
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "John"
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        password:
+          type: string
+          minLength: 8
+          description: Must contain uppercase, lowercase, and number
+          example: "SecurePassword123!"
+        confirmPassword:
+          type: string
+          example: "SecurePassword123!"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        password:
+          type: string
+          example: "SecurePassword123!"
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    VerifyEmailRequest:
+      type: object
+      required:
+        - otp
+      properties:
+        otp:
+          type: string
+          pattern: "^[0-9]{6}$"
+          example: "123456"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+
+    ResendVerificationRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - password
+        - confirmPassword
+      properties:
+        token:
+          type: string
+          example: "abcdef123456..."
+        password:
+          type: string
+          minLength: 8
+          example: "NewSecurePassword123!"
+        confirmPassword:
+          type: string
+          example: "NewSecurePassword123!"
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "John"
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Doe"
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          pattern: "^[a-zA-Z0-9_]+$"
+          example: "johndoe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        phone:
+          type: string
+          example: "+1234567890"
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+        - confirmNewPassword
+      properties:
+        currentPassword:
+          type: string
+          example: "CurrentPassword123!"
+        newPassword:
+          type: string
+          minLength: 8
+          example: "NewSecurePassword123!"
+        confirmNewPassword:
+          type: string
+          example: "NewSecurePassword123!"
+
+    AdminUpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
+        username:
+          type: string
+          example: "johndoe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        role:
+          type: string
+          enum: [user, admin, editor, moderator, customer, vendor]
+          example: "user"
+        status:
+          type: string
+          enum: [active, inactive, suspended, banned, pending]
+          example: "active"
+
+    # Response Schemas
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60f7b3b3b3b3b3b3b3b3b3b3"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
+        fullName:
+          type: string
+          example: "John Doe"
+        username:
+          type: string
+          example: "johndoe"
+        phone:
+          type: string
+          example: "+1234567890"
+        role:
+          type: string
+          enum: [user, admin, editor, moderator, customer, vendor]
+          example: "user"
+        status:
+          type: string
+          enum: [active, inactive, suspended, banned, pending]
+          example: "active"
+        emailVerified:
+          type: boolean
+          example: true
+        avatar:
+          type: string
+          example: "https://example.com/avatar.jpg"
+        lastLogin:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Tokens:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT access token (24h expiry)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: Refresh token (7d expiry)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 5
+        totalUsers:
+          type: integer
+          example: 50
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPrevPage:
+          type: boolean
+          example: false
+
+    DetailedHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "OK"
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+        environment:
+          type: string
+        version:
+          type: string
+        database:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "connected"
+            type:
+              type: string
+              example: "mongodb"
+        memory:
+          type: object
+          properties:
+            used:
+              type: number
+              description: Memory used in MB
+            total:
+              type: number
+              description: Total memory in MB
+            percentage:
+              type: number
+              description: Memory usage percentage
+        system:
+          type: object
+          properties:
+            platform:
+              type: string
+            nodeVersion:
+              type: string
+
+    # Response Wrappers
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    RegisterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+        message:
+          type: string
+          example: "Registration successful. Please check your email for verification instructions."
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            tokens:
+              $ref: '#/components/schemas/Tokens'
+        message:
+          type: string
+          example: "Login successful"
+
+    TokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            tokens:
+              $ref: '#/components/schemas/Tokens'
+        message:
+          type: string
+          example: "Tokens refreshed successfully"
+
+    UserProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+        message:
+          type: string
+          example: "User profile retrieved successfully"
+
+    UsersListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+          example: "Users retrieved successfully"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Error description"
+            code:
+              type: string
+              example: "ERROR_CODE"
+            statusCode:
+              type: integer
+              example: 400
+            timestamp:
+              type: string
+              format: date-time
